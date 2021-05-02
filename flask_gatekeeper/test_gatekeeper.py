@@ -8,6 +8,8 @@ from .gatekeeper import GateKeeper
 
 
 def test_gk_internals_ban():
+    """test internal functions of the ban mechanism
+    """
     ban_rule = [randint(2, 5), randint(2, 5), randint(5, 8)]
     ip1 = "10.0.1.1"
     ip2 = "10.0.1.2"
@@ -36,6 +38,8 @@ def test_gk_internals_ban():
 
 
 def test_gk_internals_rate_limit():
+    """test internal functions of the rate limit mechanism
+    """
     rate_limit_rule = [randint(10, 20), randint(4, 8)]
 
     ip1 = "10.0.1.1"
@@ -64,6 +68,8 @@ def test_gk_internals_rate_limit():
 
 @pytest.fixture()
 def flask_server():
+    """create a dummy flask server
+    """
     app = Flask(__name__)
     gk = GateKeeper(app, ban_rule=[3, 60, 10], rate_limit_rule=[5, 2])
 
@@ -95,6 +101,8 @@ def flask_server():
 
 
 def test_gk_on_flask_server(flask_server):
+    """test gatekeeper against a "real" server
+    """
     # global rate limiting
     # We can request until getting rate limited w8 and retry
     for _ in range(5):
@@ -106,13 +114,11 @@ def test_gk_on_flask_server(flask_server):
 
     # route specific additionnal rate limit
     # This rule is tigher, so onely 1 call triggers the rate limit
-    sleep(3)
     assert flask_server.get("/specific").status_code == 200
     assert flask_server.get("/specific").status_code == 429
 
     # route specific, standalone rate limit
     # This route does not enforce the global rule, so we have a looser rule
-    sleep(3)
     for _ in range(10):
         assert flask_server.get("/specific-standalone").status_code == 200
     assert flask_server.get("/specific-standalone").status_code == 429
@@ -126,6 +132,43 @@ def test_gk_on_flask_server(flask_server):
 
     # bypass
     # We should not have any rate limiting nor banning here
-    sleep(3)
     for _ in range(30):
         assert flask_server.get("/bypass").status_code == 200
+
+
+@pytest.fixture()
+def flask_server_headers():
+    """creates a dummy flask server
+    """
+    app = Flask(__name__)
+    gk = GateKeeper(app, ban_rule=[3, 60, 10],ip_header="x-my-ip")
+
+    @app.route("/ping")
+    def ping():
+        return "ok", 200
+
+    @app.route("/ban")
+    def ban():
+        gk.report()
+        return "ok", 200
+
+    yield app.test_client()
+
+def test_gk_on_flask_server_header(flask_server_headers):
+    """test the ip_header function of gatekeeper
+    """
+    headers1 = {"x-my-ip":"10.0.1.1"}
+    headers2 = {"x-my-ip":"10.0.1.2"}
+    noheaders = {"no-x-my-ip":"10.0.1.3"}
+
+    assert flask_server_headers.get("/ping",headers=headers1).status_code == 200
+
+    for _ in range(3):
+        assert flask_server_headers.get("/ban",headers=headers1).status_code == 200
+    assert flask_server_headers.get("/ping",headers=headers1).status_code == 403
+
+    assert flask_server_headers.get("/ping",headers=headers2).status_code == 200
+
+    for _ in range(3):
+        assert flask_server_headers.get("/ban",headers=noheaders).status_code == 200
+    assert flask_server_headers.get("/ping",headers=noheaders).status_code == 403
