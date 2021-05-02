@@ -196,35 +196,3 @@ class GateKeeper:
             return wrapper
 
         return decorator
-
-
-if __name__ == "__main__":
-    from flask import Flask
-    app = Flask(__name__)
-    gk = GateKeeper(app, ban_rule=[3, 60, 600], rate_limit_rule=[1, 60])
-
-    @app.route("/ping")
-    def ping():
-        return "ok", 200
-
-    @app.route("/ban")
-    def ban():
-        gk.report()
-        return "ok", 200
-
-    @app.route("/specific")
-    @gk.specific(rate_limit_rule=[10, 10])
-    def specific():
-        return "ok", 200
-
-    @app.route("/specific-standalone")
-    @gk.specific(rate_limit_rule=[10, 10], standalone=True)
-    def specific_standalone():
-        return "ok", 200
-
-    @app.route("/bypass")
-    @gk.bypass
-    def bypass():
-        return "ok", 200
-
-    app.run("127.0.0.1", 5001)
