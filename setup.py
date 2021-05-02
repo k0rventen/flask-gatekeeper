@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="flask_gatekeeper",
-    version="0.2",
+    version="0.2.1",
     author="k0rventen",
     description="A (very) simple banning & rate limiting extension for Flask.",
     long_description=long_description,
