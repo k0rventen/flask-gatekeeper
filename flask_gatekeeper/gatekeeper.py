@@ -42,7 +42,7 @@ class GateKeeper:
         - rate_count is the maximum number of requests 
         - rate_window is the rolling time window for the rate count.
 
-        As an example, ban_rule=[3,60,600],rate_limit_rule=[100,10] would:
+        As an example, ban_rule=[3,60,600], rate_limit_rule=[100,10] would:
         - ban any IP for 600s if it has been reported 3 times in the last 60s,
         - rate limit any IP if it has made more than 100 requests in the last 10s.
 
@@ -52,6 +52,8 @@ class GateKeeper:
 
         You can delay the init by omitting `app` here and calling `.init_app()` later.
 
+        If you set ip_header but the header is not present in the request, it falls back to a "no-ip" string, and any request made by potentially different clients will be added to this.
+        
         Args:
             app (flask.Flask, optional): Flask app to wrap around. Defaults to None.
             ban_rule (list, optional): Global ban rule for the whole app. Defaults to None.
@@ -83,7 +85,8 @@ class GateKeeper:
         """Returns the IP of the client
         """
         if self.ip_header:
-            return request.headers.get(self.ip_header)
+            return request.headers.get(self.ip_header) or "no-ip"
+
         return request.remote_addr
 
     def _create(self, ip):
@@ -159,8 +162,8 @@ class GateKeeper:
         @wraps(route)
         def wrapper(*a, **k):
             return route(*a, **k)
+        
         # We store the name of the function associated with the route, not the path of the route
-
         self.bypass_routes.add(route.__name__)
         return wrapper
 
