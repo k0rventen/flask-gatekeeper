@@ -24,18 +24,22 @@ from flask_gatekeeper import GateKeeper # important
 app = Flask(__name__)
 
 # add our GateKeeper instance with global rules
-gk = GateKeeper(app,ban_rule=[3,60,600],rate_limit_rule=[100,60])
+gk = GateKeeper(app=app, # link to our app now or use .init_app() later.
+                ban_rule=[3,60,600], # will ban for 600s if an IP is reported using `report()` 3 times in a 60s window.
+                rate_limit_rule=[100,60] # will rate limit if an IP makes more than 100 request in a 60s window.
+                ) 
 
-@app.route("/ping")
+
+@app.route("/ping") # this route is rate limited by the global rule
 def ping():
     return "ok",200
 
-@app.route("/login")
+@app.route("/login") # also rate limited by the global rule
 def login():
     if password_is_ok():
         return token,200
     else:
-        gk.report() # ban if an IP is "reported" 3 times in less than 60s
+        gk.report() # report that IP
         return "bad password",401
 
 @app.route("/specific")
@@ -44,7 +48,7 @@ def specific():
     return "ok",200
 
 @app.route("/specific")
-@gk.specific(rate_limit_rule=[1,10],standalone=True) # route only limited by the specific rule
+@gk.specific(rate_limit_rule=[1,10],standalone=True) # rate limited only by this rule
 def specific():
     return "ok",200
 
@@ -55,5 +59,5 @@ def bypass():
     return "ok",200
 
 
-app.run("127.0.0.1",5001)
+app.run("127.0.0.1",5000)
 ```
