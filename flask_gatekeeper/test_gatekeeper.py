@@ -1,8 +1,11 @@
-from flask_gatekeeper import GateKeeper
 from random import randint
 from time import sleep
-from flask import Flask,request
-import pytest 
+
+import pytest
+from flask import Flask
+
+from .gatekeeper import GateKeeper
+
 
 def test_gk_internals_ban():
     ban_rule = [randint(2, 5), randint(2, 5), randint(5, 8)]
@@ -12,24 +15,24 @@ def test_gk_internals_ban():
     test_gk._create(ip1)
     test_gk._create(ip2)
 
-    for _ in range(ban_rule[0]-1):
+    for _ in range(ban_rule[0] - 1):
         test_gk.report(ip1)
 
     # We should not be banned
-    assert test_gk.is_banned(ip1) == False
+    assert test_gk.is_banned(ip1) is False
 
     # add one more
     test_gk.report(ip1)
 
     # now we should
-    assert test_gk.is_banned(ip1) == True
+    assert test_gk.is_banned(ip1) is True
 
     # but not ip2
-    assert test_gk.is_banned(ip2) == False
+    assert test_gk.is_banned(ip2) is False
 
     # w8 for ban to lift
     sleep(ban_rule[2])
-    assert test_gk.is_banned(ip1) == False
+    assert test_gk.is_banned(ip1) is False
 
 
 def test_gk_internals_rate_limit():
@@ -41,22 +44,22 @@ def test_gk_internals_rate_limit():
     test_gk._create(ip1)
     test_gk._create(ip2)
 
-    for _ in range(rate_limit_rule[0]-1):
+    for _ in range(rate_limit_rule[0] - 1):
         test_gk._add(ip1)
 
     # we should be ok
-    assert test_gk.is_rate_limited(ip1) == False
+    assert test_gk.is_rate_limited(ip1) is False
 
     # make one more
     test_gk._add(ip1)
-    assert test_gk.is_rate_limited(ip1) == True
+    assert test_gk.is_rate_limited(ip1) is True
 
     # not ip2
-    assert test_gk.is_rate_limited(ip2) == False
+    assert test_gk.is_rate_limited(ip2) is False
 
     # if we w8 for the window we are ok
-    sleep(rate_limit_rule[1]+1)
-    assert test_gk.is_rate_limited(ip1) == False
+    sleep(rate_limit_rule[1] + 1)
+    assert test_gk.is_rate_limited(ip1) is False
 
 
 @pytest.fixture()
@@ -79,7 +82,7 @@ def flask_server():
         return "ok", 200
 
     @app.route("/specific-standalone")
-    @gk.specific(rate_limit_rule=[10, 10],standalone=True)
+    @gk.specific(rate_limit_rule=[10, 10], standalone=True)
     def specific_standalone():
         return "ok", 200
 
@@ -96,11 +99,10 @@ def test_gk_on_flask_server(flask_server):
     # We can request until getting rate limited w8 and retry
     for _ in range(5):
         assert flask_server.get("/ping").status_code == 200
-    
+
     assert flask_server.get("/ping").status_code == 429
     sleep(3)
     assert flask_server.get("/ping").status_code == 200
-
 
     # route specific additionnal rate limit
     # This rule is tigher, so onely 1 call triggers the rate limit
@@ -119,11 +121,11 @@ def test_gk_on_flask_server(flask_server):
     # We can report 3 times this IP, then following calls will be banned
     sleep(3)
     for _ in range(3):
-         assert flask_server.get("/ban").status_code == 200
+        assert flask_server.get("/ban").status_code == 200
     assert flask_server.get("/ping").status_code == 403
-    
+
     # bypass
     # We should not have any rate limiting nor banning here
     sleep(3)
     for _ in range(30):
-         assert flask_server.get("/bypass").status_code == 200
+        assert flask_server.get("/bypass").status_code == 200
