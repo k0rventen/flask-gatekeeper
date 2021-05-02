@@ -23,9 +23,9 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install
+    - name: Install deps
       run: |
-        pip install flake8 pytest
+        pip install flake8 pytest Flask
     - name: Lint
       run: |
         # exit in case of serious syntax errors
