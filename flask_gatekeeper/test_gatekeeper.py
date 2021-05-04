@@ -62,7 +62,7 @@ def test_gk_internals_rate_limit():
     assert test_gk.is_rate_limited(ip2) is False
 
     # if we w8 for the window we are ok
-    sleep(rate_limit_rule[1] + 1)
+    sleep(rate_limit_rule[1])
     assert test_gk.is_rate_limited(ip1) is False
 
 

@@ -19,8 +19,8 @@ class IP:
         self.ban_entries = deque(maxlen=ban_count)
         self.rate_entries = deque(maxlen=rate_count)
 
-        self.add_report = lambda: self.ban_entries.append(int(time.time()))
-        self.add_entry = lambda: self.rate_entries.append(int(time.time()))
+        self.add_report = lambda: self.ban_entries.append(time.time())
+        self.add_entry = lambda: self.rate_entries.append(time.time())
 
 
 class GateKeeper:
@@ -63,8 +63,8 @@ class GateKeeper:
         if ban_rule:
             self.ban_enabled = True
             self.ban_count = ban_rule[0]
-            self.ban_duration = ban_rule[1]
-            self.ban_window = ban_rule[2]
+            self.ban_window = ban_rule[1]
+            self.ban_duration = ban_rule[2]
         else:
             self.ban_enabled = False
 
@@ -116,23 +116,23 @@ class GateKeeper:
 
     def banned_for(self, ip) -> int:
         """returns the time in seconds this IP is banned for"""
-        return max((self.ips[ip].ban_entries[-1] + self.ban_duration) - int(time.time()), 1)
+        return int((self.ips[ip].ban_entries[-1] + self.ban_duration) - time.time())
 
     def rate_limited_for(self, ip) -> int:
         """returns the time in seconds this IP is rate limited for"""
         rate_entries = [e for e in self.ips[ip].rate_entries if e >= time.time() - self.rate_window]
 
-        return int((rate_entries[0] + self.rate_window) - time.time()) if rate_entries else 1
+        return int((rate_entries[0] + self.rate_window) - time.time()) if rate_entries else 0
 
     def is_banned(self, ip) -> bool:
         """returns whether this IP is currently banned or not
         """
         # have we too much counts for our interval
-        if not self.ips[ip].ban_active and len([e for e in self.ips[ip].ban_entries if e >= int(time.time()) - self.ban_window]) >= self.ban_count:
+        if not self.ips[ip].ban_active and len([e for e in self.ips[ip].ban_entries if e >= time.time() - self.ban_window]) >= self.ban_count:
             self.ips[ip].ban_active = True
         # is the last entry still in our ban duration ?
         if self.ips[ip].ban_active:
-            if int(time.time()) <= self.ips[ip].ban_entries[-1] + self.ban_duration:
+            if time.time() <= self.ips[ip].ban_entries[-1] + self.ban_duration:
                 return True
             self.ips[ip].ban_active = False
 
@@ -142,7 +142,7 @@ class GateKeeper:
         """returns whether this IP is currently rate limited or not
         """
         # in the last rate_interval, did we had more entries than rate_count ?
-        if len([e for e in self.ips[ip].rate_entries if e >= int(time.time()) - self.rate_window]) >= self.rate_count:
+        if len([e for e in self.ips[ip].rate_entries if e >= time.time() - self.rate_window]) >= self.rate_count:
             return True
         return False
 
