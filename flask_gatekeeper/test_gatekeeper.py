@@ -141,7 +141,7 @@ def flask_server_headers():
     """creates a dummy flask server
     """
     app = Flask(__name__)
-    gk = GateKeeper(app, ban_rule=[3, 60, 10],ip_header="x-my-ip")
+    gk = GateKeeper(app, ban_rule=[3, 60, 10], ip_header="x-my-ip")
 
     @app.route("/ping")
     def ping():
@@ -154,21 +154,28 @@ def flask_server_headers():
 
     yield app.test_client()
 
+
 def test_gk_on_flask_server_header(flask_server_headers):
     """test the ip_header function of gatekeeper
     """
-    headers1 = {"x-my-ip":"10.0.1.1"}
-    headers2 = {"x-my-ip":"10.0.1.2"}
-    noheaders = {"no-x-my-ip":"10.0.1.3"}
+    headers1 = {"x-my-ip": "10.0.1.1"}
+    headers2 = {"x-my-ip": "10.0.1.2"}
+    noheaders = {"no-x-my-ip": "10.0.1.3"}
 
-    assert flask_server_headers.get("/ping",headers=headers1).status_code == 200
-
-    for _ in range(3):
-        assert flask_server_headers.get("/ban",headers=headers1).status_code == 200
-    assert flask_server_headers.get("/ping",headers=headers1).status_code == 403
-
-    assert flask_server_headers.get("/ping",headers=headers2).status_code == 200
+    assert flask_server_headers.get(
+        "/ping", headers=headers1).status_code == 200
 
     for _ in range(3):
-        assert flask_server_headers.get("/ban",headers=noheaders).status_code == 200
-    assert flask_server_headers.get("/ping",headers=noheaders).status_code == 403
+        assert flask_server_headers.get(
+            "/ban", headers=headers1).status_code == 200
+    assert flask_server_headers.get(
+        "/ping", headers=headers1).status_code == 403
+
+    assert flask_server_headers.get(
+        "/ping", headers=headers2).status_code == 200
+
+    for _ in range(3):
+        assert flask_server_headers.get(
+            "/ban", headers=noheaders).status_code == 200
+    assert flask_server_headers.get(
+        "/ping", headers=noheaders).status_code == 403
