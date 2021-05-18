@@ -42,12 +42,12 @@ def login():
         gk.report() # report that IP
         return "bad password",401
 
-@app.route("/specific")
+@app.route("/global_plus_specific")
 @gk.specific(rate_limit_rule=[1,10]) # add another rate limit on top of the global one
 def specific():
     return "ok",200
 
-@app.route("/specific")
+@app.route("/standalone_specific")
 @gk.specific(rate_limit_rule=[1,10],standalone=True) # rate limited only by this rule
 def specific():
     return "ok",200

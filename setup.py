@@ -6,8 +6,9 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="flask_gatekeeper",
-    version="0.3.0",
+    version="0.3.1",
     author="k0rventen",
+    python_requires='>=3.7',
     description="A (very) simple banning & rate limiting extension for Flask.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -19,6 +20,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
     ],
     install_requires=[
-        'Flask==1.1.*',
+        'Flask>=1.1.*',
     ],
 )
