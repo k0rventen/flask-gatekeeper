@@ -19,6 +19,7 @@ class IP:
         self.ban_entries = deque(maxlen=ban_count)
         self.rate_entries = deque(maxlen=rate_count)
 
+        # setters
         self.add_report = lambda: self.ban_entries.append(time.time())
         self.add_entry = lambda: self.rate_entries.append(time.time())
 
@@ -53,7 +54,7 @@ class GateKeeper:
         You can delay the init by omitting `app` here and calling `.init_app()` later.
 
         If you set ip_header but the header is not present in the request, it falls back to a "no-ip" string, and any request made by potentially different clients will be added to this.
-        
+
         Args:
             app (flask.Flask, optional): Flask app to wrap around. Defaults to None.
             ban_rule (list, optional): Global ban rule for the whole app. Defaults to None.
@@ -82,49 +83,48 @@ class GateKeeper:
             self.init_app(app)
 
     def _get_ip(self) -> str:
-        """Returns the IP of the client
-        """
+        """Returns the IP of the client"""
         if self.ip_header:
             return request.headers.get(self.ip_header) or "no-ip"
 
         return request.remote_addr
 
     def _create(self, ip):
-        """add the IP to the tracked dict
-        """
+        """add the IP to the tracked dict"""
         if ip not in self.ips:
             self.ips[ip] = IP(ban_count=self.ban_count if self.ban_enabled else 0,
                               rate_count=self.rate_count if self.rate_limit_enabled else 0)
 
     def _before_request(self):
         """Function which runs before every request
+
+           if the client is either banned or rate-limited, we short-circuit the response 
+           and reply directly with the appropriate message.
         """
         if request.endpoint not in self.bypass_routes:  # avoid routes with the @bypass decorator, or if they use specific limits with override
             ip = self._get_ip()
             self._create(ip)
 
-            if self.ban_enabled and self.is_banned(ip):
-                return "banned for {}s".format(self.banned_for(ip)), 403
-            if self.rate_limit_enabled and self.is_rate_limited(ip):
-                return "rate limited for {}s".format(self.rate_limited_for(ip)), 429
+            if self.ban_enabled and self._is_ip_banned(ip):
+                return "banned for {}s".format(self._banned_for(ip)), 403
+            if self.rate_limit_enabled and self._is_ip_rate_limited(ip):
+                return "rate limited for {}s".format(self._rate_limited_for(ip)), 429
             self._add(ip)
 
     def _add(self, ip):
-        """add a request to this IP tracked
-        """
+        """add a request to this IP tracked"""
         self.ips[ip].add_entry()
 
-    def banned_for(self, ip) -> int:
+    def _banned_for(self, ip) -> int:
         """returns the time in seconds this IP is banned for"""
         return int((self.ips[ip].ban_entries[-1] + self.ban_duration) - time.time())
 
-    def rate_limited_for(self, ip) -> int:
+    def _rate_limited_for(self, ip) -> int:
         """returns the time in seconds this IP is rate limited for"""
         rate_entries = [e for e in self.ips[ip].rate_entries if e >= time.time() - self.rate_window]
+        return int((rate_entries[0] + self.rate_window) - time.time()) or 0
 
-        return int((rate_entries[0] + self.rate_window) - time.time()) if rate_entries else 0
-
-    def is_banned(self, ip) -> bool:
+    def _is_ip_banned(self, ip) -> bool:
         """returns whether this IP is currently banned or not
         """
         # have we too much counts for our interval
@@ -138,31 +138,30 @@ class GateKeeper:
 
         return False
 
-    def is_rate_limited(self, ip) -> bool:
-        """returns whether this IP is currently rate limited or not
-        """
+    def _is_ip_rate_limited(self, ip) -> bool:
+        """returns whether this IP is currently rate limited or not"""
         # in the last rate_interval, did we had more entries than rate_count ?
         if len([e for e in self.ips[ip].rate_entries if e >= time.time() - self.rate_window]) >= self.rate_count:
             return True
         return False
 
     def init_app(self, app):
-        """add our before request to flask now
-        """
+        """add our before request to flask now"""
         app.before_request(self._before_request)
 
     def report(self, ip=None):
-        """Report an IP. If no ip arg is provided, uses the ip_header arg provided to the GateKeeper instance
+        """Report an IP. 
+        If no ip arg is provided, uses the ip_header arg provided to the GateKeeper instance
         """
         client_ip = ip or self._get_ip()
-        self._add(client_ip)
         self.ips[client_ip].add_report()
 
     def bypass(self, route):
+        """do not apply rate-limiting to this route"""
         @wraps(route)
         def wrapper(*a, **k):
             return route(*a, **k)
-        
+
         # We store the name of the function associated with the route, not the path of the route
         self.bypass_routes.add(route.__name__)
         return wrapper
@@ -170,7 +169,8 @@ class GateKeeper:
     def specific(self, rate_limit_rule, standalone=False, ip_header=None):
         """Route specific gatekeeper. Only for rate limiting purposes.
 
-        By defaults the rate_limite is set _on top_ of the global instance rule. 
+        By defaults the specific rate_limit rule is set _on top_ of the global instance rule. 
+        A use-case could be a global per-minute rule, and a per-second bursting rule here
         If you want to set a unique rate limite rule, set `standalone` to True.
 
         You can supply a different ip_header, otherwise it will default to the instance configuration.
@@ -187,8 +187,8 @@ class GateKeeper:
                 ip = specific_gk._get_ip()
                 specific_gk._create(ip)
 
-                if specific_gk.rate_limit_enabled and specific_gk.is_rate_limited(ip):
-                    return "rate limited for {}s".format(specific_gk.rate_limited_for(ip)), 429
+                if specific_gk.rate_limit_enabled and specific_gk._is_ip_rate_limited(ip):
+                    return "rate limited for {}s".format(specific_gk._rate_limited_for(ip)), 429
 
                 specific_gk._add(ip)
                 return route(*args, **kwargs)
