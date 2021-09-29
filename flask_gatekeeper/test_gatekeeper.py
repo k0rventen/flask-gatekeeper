@@ -8,8 +8,7 @@ from .gatekeeper import GateKeeper
 
 
 def test_gk_internals_ban():
-    """test internal functions of the ban mechanism
-    """
+    """test internal functions of the ban mechanism"""
     ban_rule = [randint(2, 5), randint(2, 5), randint(5, 8)]
     ip1 = "10.0.1.1"
     ip2 = "10.0.1.2"
@@ -21,25 +20,24 @@ def test_gk_internals_ban():
         test_gk.report(ip1)
 
     # We should not be banned
-    assert test_gk.is_banned(ip1) is False
+    assert test_gk._is_ip_banned(ip1) is False
 
     # add one more
     test_gk.report(ip1)
 
     # now we should
-    assert test_gk.is_banned(ip1) is True
+    assert test_gk._is_ip_banned(ip1) is True
 
     # but not ip2
-    assert test_gk.is_banned(ip2) is False
+    assert test_gk._is_ip_banned(ip2) is False
 
     # w8 for ban to lift
     sleep(ban_rule[2])
-    assert test_gk.is_banned(ip1) is False
+    assert test_gk._is_ip_banned(ip1) is False
 
 
 def test_gk_internals_rate_limit():
-    """test internal functions of the rate limit mechanism
-    """
+    """test internal functions of the rate limit mechanism"""
     rate_limit_rule = [randint(10, 20), randint(4, 8)]
 
     ip1 = "10.0.1.1"
@@ -52,24 +50,23 @@ def test_gk_internals_rate_limit():
         test_gk._add(ip1)
 
     # we should be ok
-    assert test_gk.is_rate_limited(ip1) is False
+    assert test_gk._is_ip_rate_limited(ip1) is False
 
     # make one more
     test_gk._add(ip1)
-    assert test_gk.is_rate_limited(ip1) is True
+    assert test_gk._is_ip_rate_limited(ip1) is True
 
     # not ip2
-    assert test_gk.is_rate_limited(ip2) is False
+    assert test_gk._is_ip_rate_limited(ip2) is False
 
     # if we w8 for the window we are ok
     sleep(rate_limit_rule[1])
-    assert test_gk.is_rate_limited(ip1) is False
+    assert test_gk._is_ip_rate_limited(ip1) is False
 
 
 @pytest.fixture()
 def flask_server():
-    """create a dummy flask server
-    """
+    """create a dummy flask server"""
     app = Flask(__name__)
     gk = GateKeeper(app, ban_rule=[3, 60, 10], rate_limit_rule=[5, 2])
 
@@ -101,8 +98,7 @@ def flask_server():
 
 
 def test_gk_on_flask_server(flask_server):
-    """test gatekeeper against a "real" server
-    """
+    """test gatekeeper against a "real" server"""
     # global rate limiting
     # We can request until getting rate limited w8 and retry
     for _ in range(5):
@@ -138,8 +134,7 @@ def test_gk_on_flask_server(flask_server):
 
 @pytest.fixture()
 def flask_server_headers():
-    """creates a dummy flask server
-    """
+    """creates a dummy flask server"""
     app = Flask(__name__)
     gk = GateKeeper(app, ban_rule=[3, 60, 10], ip_header="x-my-ip")
 
@@ -156,8 +151,7 @@ def flask_server_headers():
 
 
 def test_gk_on_flask_server_header(flask_server_headers):
-    """test the ip_header function of gatekeeper
-    """
+    """test the ip_header function of gatekeeper"""
     headers1 = {"x-my-ip": "10.0.1.1"}
     headers2 = {"x-my-ip": "10.0.1.2"}
     noheaders = {"no-x-my-ip": "10.0.1.3"}
