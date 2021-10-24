@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>flask-gatekeeper &mdash; flask-gatekeeper 0.3.3 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="flask_gatekeeper code documentation" href="gatekeeper.html" />
+    <link rel="prev" title="Welcome to flask-gatekeeper’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> flask-gatekeeper
+          </a>
+              <div class="version">
+                0.3.3
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">flask-gatekeeper</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting started</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#install">Install</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#basic-usage">Basic usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#complete-example">Complete example</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gatekeeper.html">flask_gatekeeper code documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">flask-gatekeeper</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>flask-gatekeeper</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/readme.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="flask-gatekeeper">
+<h1>flask-gatekeeper<a class="headerlink" href="#flask-gatekeeper" title="Permalink to this headline"></a></h1>
+<p>A (very) simple banning &amp; rate limiting extension for Flask.</p>
+<p><a class="reference external" href="https://pypi.org/project/flask-gatekeeper/"><img alt="PyPI" src="https://img.shields.io/pypi/v/flask-gatekeeper.svg" /></a></p>
+<p>It’s not meant to be a replacement for other, more complex banning &amp;
+rate limiting modules like <code class="docutils literal notranslate"><span class="pre">flask-Limiter</span></code> or <code class="docutils literal notranslate"><span class="pre">flask-ipban</span></code>.</p>
+<p>It has the following specificities: - no dependencies, - quite fast due
+to the use of <code class="docutils literal notranslate"><span class="pre">collections.deque</span></code>, - in-memory configuration (no
+persistence)</p>
+<section id="getting-started">
+<h2>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline"></a></h2>
+<section id="install">
+<h3>Install<a class="headerlink" href="#install" title="Permalink to this headline"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">flask</span><span class="o">-</span><span class="n">gatekeeper</span>
+</pre></div>
+</div>
+</section>
+<section id="basic-usage">
+<h3>Basic usage<a class="headerlink" href="#basic-usage" title="Permalink to this headline"></a></h3>
+<p>Import flask-gatekeeper along flask</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span>
+<span class="kn">from</span> <span class="nn">flask_gatekeeper</span> <span class="kn">import</span> <span class="n">GateKeeper</span>
+</pre></div>
+</div>
+<p>then after creating the flask app, create the Gatekeeper instance:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="n">gk</span> <span class="o">=</span> <span class="n">GateKeeper</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="n">app</span><span class="p">,</span> <span class="c1"># link to our app now or use .init_app(app) later.</span>
+                <span class="n">ip_header</span><span class="o">=</span><span class="s2">&quot;X-Forwarded-For&quot;</span><span class="p">,</span> <span class="c1"># optionnaly specify a header for the IP (e.g. if using a reverse proxy in front)</span>
+                <span class="n">ban_rule</span><span class="o">=</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="mi">60</span><span class="p">,</span><span class="mi">600</span><span class="p">],</span> <span class="c1"># will ban for 600s if an IP is reported using `.report()` 3 times in a 60s window.</span>
+                <span class="n">rate_limit_rule</span><span class="o">=</span><span class="p">[</span><span class="mi">100</span><span class="p">,</span><span class="mi">60</span><span class="p">])</span> <span class="c1"># will rate limit if an IP makes more than 100 request in a 60s window.</span>
+</pre></div>
+</div>
+<p>By default, routes will use the rate limiting of the previously created
+instance:</p>
+<ul class="simple">
+<li><p>Rate limiting is applied automatically by counting the number of
+requests.</p></li>
+<li><p>Banning uses the <code class="docutils literal notranslate"><span class="pre">.report()</span></code> function. This function can be used
+when a provided password is incorrect, or when you define an abnormal
+behavior that should lead to banning.</p></li>
+</ul>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/ping&quot;</span><span class="p">)</span> <span class="c1"># this route is rate limited by the global rule</span>
+<span class="k">def</span> <span class="nf">ping</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="mi">200</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/login&quot;</span><span class="p">)</span> <span class="c1"># also rate limited by the global rule</span>
+<span class="k">def</span> <span class="nf">login</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">password_is_ok</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">token</span><span class="p">,</span><span class="mi">200</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">gk</span><span class="o">.</span><span class="n">report</span><span class="p">()</span> <span class="c1"># report that IP</span>
+        <span class="k">return</span> <span class="s2">&quot;bad password&quot;</span><span class="p">,</span><span class="mi">401</span>
+</pre></div>
+</div>
+<p>Finally, you can specify custom rules for a given route, using
+decorators:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/global_plus_specific&quot;</span><span class="p">)</span>
+<span class="nd">@gk</span><span class="o">.</span><span class="n">specific</span><span class="p">(</span><span class="n">rate_limit_rule</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="p">])</span> <span class="c1"># add another rate limit on top of the global one (to avoid bursting for example)</span>
+<span class="k">def</span> <span class="nf">specific</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="mi">200</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/standalone&quot;</span><span class="p">)</span>
+<span class="nd">@gk</span><span class="o">.</span><span class="n">specific</span><span class="p">(</span><span class="n">rate_limit_rule</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="p">],</span><span class="n">standalone</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># rate limited only by this rule</span>
+<span class="k">def</span> <span class="nf">standalone</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="mi">200</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/bypass&quot;</span><span class="p">)</span>
+<span class="nd">@gk</span><span class="o">.</span><span class="n">bypass</span> <span class="c1"># do not apply anything on that route</span>
+<span class="k">def</span> <span class="nf">bypass</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="mi">200</span>
+</pre></div>
+</div>
+</section>
+<section id="complete-example">
+<h3>Complete example<a class="headerlink" href="#complete-example" title="Permalink to this headline"></a></h3>
+<p>Here is a demo app showing the main capabilities of flask-gatekeeper :</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">request</span>
+<span class="kn">from</span> <span class="nn">flask_gatekeeper</span> <span class="kn">import</span> <span class="n">GateKeeper</span>
+
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="c1"># add our GateKeeper instance with global rules</span>
+<span class="n">gk</span> <span class="o">=</span> <span class="n">GateKeeper</span><span class="p">(</span><span class="n">app</span><span class="o">=</span><span class="n">app</span><span class="p">,</span> <span class="c1"># link to our app now or use .init_app(app) later.</span>
+                <span class="c1"># ip_header=&quot;X-Forwarded-For&quot;, # optionnaly specify a header for the IP (e.g. if using a reverse proxy in front)</span>
+                <span class="n">ban_rule</span><span class="o">=</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="mi">60</span><span class="p">,</span><span class="mi">600</span><span class="p">],</span> <span class="c1"># will ban for 600s if an IP is reported using `gk.report()` 3 times in a 60s window.</span>
+                <span class="n">rate_limit_rule</span><span class="o">=</span><span class="p">[</span><span class="mi">100</span><span class="p">,</span><span class="mi">60</span><span class="p">])</span> <span class="c1"># will rate limit if an IP makes more than 100 request in a 60s window.</span>
+
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/ping&quot;</span><span class="p">)</span> <span class="c1"># this route is rate limited by the global rule</span>
+<span class="k">def</span> <span class="nf">ping</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="mi">200</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/login&quot;</span><span class="p">)</span> <span class="c1"># also rate limited by the global rule</span>
+<span class="k">def</span> <span class="nf">login</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;password&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;password&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">token</span><span class="p">,</span><span class="mi">200</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">gk</span><span class="o">.</span><span class="n">report</span><span class="p">()</span> <span class="c1"># report that IP</span>
+        <span class="k">return</span> <span class="s2">&quot;bad password&quot;</span><span class="p">,</span><span class="mi">401</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/global_plus_specific&quot;</span><span class="p">)</span>
+<span class="nd">@gk</span><span class="o">.</span><span class="n">specific</span><span class="p">(</span><span class="n">rate_limit_rule</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="p">])</span> <span class="c1"># add another rate limit on top of the global one (to avoid bursting for example)</span>
+<span class="k">def</span> <span class="nf">specific</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="mi">200</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/standalone&quot;</span><span class="p">)</span>
+<span class="nd">@gk</span><span class="o">.</span><span class="n">specific</span><span class="p">(</span><span class="n">rate_limit_rule</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="p">],</span><span class="n">standalone</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># rate limited only by this rule</span>
+<span class="k">def</span> <span class="nf">standalone</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="mi">200</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/bypass&quot;</span><span class="p">)</span>
+<span class="nd">@gk</span><span class="o">.</span><span class="n">bypass</span> <span class="c1"># do not apply anything on that route</span>
+<span class="k">def</span> <span class="nf">bypass</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="mi">200</span>
+
+
+<span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span><span class="mi">5000</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Copy that in a file or your REPL, then try the various endpoints.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to flask-gatekeeper’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="gatekeeper.html" class="btn btn-neutral float-right" title="flask_gatekeeper code documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, k0rventen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
