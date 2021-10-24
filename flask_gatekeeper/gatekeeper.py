@@ -1,5 +1,6 @@
 """A (very) simple banning & rate limiting extension for Flask.
 """
+from inspect import signature
 import time
 from collections import deque
 from functools import wraps
@@ -25,7 +26,7 @@ class IP:
 
 
 class GateKeeper:
-    def __init__(self, app=None, ban_rule=None, rate_limit_rule=None, ip_header=None):
+    def __init__(self, app=None, ban_rule=None, rate_limit_rule=None, ip_header=None, rate_limit_func=None, ban_func=None):
         """GateKeeper instance around a flask app.
 
         Provides rate-limiting & ban functions.
@@ -55,11 +56,16 @@ class GateKeeper:
 
         If you set ip_header but the header is not present in the request, it falls back to a "no-ip" string, and any request made by potentially different clients will be added to this.
 
+        ban_func & rate_limit_func should be functions with 3 parameters that returns a string. 
+        The parameters are ban_count/rate_limit, time_window, retry_in.
+
         Args:
             app (flask.Flask, optional): Flask app to wrap around. Defaults to None.
             ban_rule (list, optional): Global ban rule for the whole app. Defaults to None.
             rate_limit_rule (list, optional): Global rate limit rule for the whole app. Defaults to None.
             ip_header (str, optional): Header to check for the IP. useful with a proxy that will add a header with the ip of the actual client. Defaults to request.remote_addr.
+            rate_limit_func(function, optional): Function that can be used for the body of the response when rate-limited
+            ban_func(function, optional): Function that can be used for the body of the response when banned
         """
         if ban_rule:
             self.ban_enabled = True
@@ -75,6 +81,18 @@ class GateKeeper:
             self.rate_window = rate_limit_rule[1]
         else:
             self.rate_limit_enabled = False
+
+        if callable(rate_limit_func) and len(signature(rate_limit_func).parameters) == 3:
+            self._rate_limit_func = rate_limit_func
+        else:
+            self._rate_limit_func = lambda rate_limit, rate_window, retry_in: "rate-limited for {}s (over {} requests in a {}s window)".format(
+                retry_in, rate_limit, rate_window)
+
+        if callable(ban_func) and len(signature(ban_func).parameters) == 3:
+            self._ban_func = ban_func
+        else:
+            self._ban_func = lambda ban_count, ban_window, retry_in: "banned for {}s (reported {} times in a {}s window)".format(
+                retry_in, ban_count, ban_window)
 
         self.ip_header = ip_header
         self.ips = {}
@@ -106,9 +124,9 @@ class GateKeeper:
             self._create(ip)
 
             if self.ban_enabled and self._is_ip_banned(ip):
-                return "banned for {}s".format(self._banned_for(ip)), 403
+                return self._ban_func(self.ban_count, self.ban_window, self._banned_for(ip)), 403
             if self.rate_limit_enabled and self._is_ip_rate_limited(ip):
-                return "rate limited for {}s".format(self._rate_limited_for(ip)), 429
+                return self._rate_limit_func(self.rate_count, self.rate_window, self._rate_limited_for(ip)), 429
             self._add(ip)
 
     def _add(self, ip):
@@ -169,7 +187,7 @@ class GateKeeper:
     def specific(self, rate_limit_rule, standalone=False, ip_header=None):
         """Route specific gatekeeper. Only for rate limiting purposes.
 
-        By defaults the specific rate_limit rule is set _on top_ of the global instance rule. 
+        By defaults the specific rate_limit rule is set on top of the global instance rule. 
         A use-case could be a global per-minute rule, and a per-second bursting rule here
         If you want to set a unique rate limite rule, set `standalone` to True.
 
@@ -188,7 +206,7 @@ class GateKeeper:
                 specific_gk._create(ip)
 
                 if specific_gk.rate_limit_enabled and specific_gk._is_ip_rate_limited(ip):
-                    return "rate limited for {}s".format(specific_gk._rate_limited_for(ip)), 429
+                    return self._rate_limit_func(specific_gk.rate_count, specific_gk.rate_window, specific_gk._rate_limited_for(ip)), 429
 
                 specific_gk._add(ip)
                 return route(*args, **kwargs)

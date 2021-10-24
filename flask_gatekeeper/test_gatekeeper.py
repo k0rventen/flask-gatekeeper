@@ -64,6 +64,18 @@ def test_gk_internals_rate_limit():
     assert test_gk._is_ip_rate_limited(ip1) is False
 
 
+def test_gk_custom_return_func():
+    """test return funcs"""
+    rate_limit_rule = [randint(10, 20), randint(4, 8)]
+    
+    ban_func = lambda count,window,retry: "custom ban: {} {} {}".format(count,window,retry)
+    rate_func = lambda count,window,retry: "custom rate: {} {} {}".format(count,window,retry)
+    
+    test_gk = GateKeeper(rate_limit_rule=rate_limit_rule,rate_limit_func=rate_func,ban_func=ban_func)
+
+    assert test_gk._ban_func(0,0,0) == "custom ban: 0 0 0"
+    assert test_gk._rate_limit_func(1,1,1) == "custom rate: 1 1 1"
+
 @pytest.fixture()
 def flask_server():
     """create a dummy flask server"""

@@ -1,11 +1,11 @@
 import setuptools
-
+from flask_gatekeeper import __version__
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="flask_gatekeeper",
-    version="0.3.2",
+    version=__version__,
     author="k0rventen",
     python_requires='>=3.7',
     description="A (very) simple banning & rate limiting extension for Flask.",
