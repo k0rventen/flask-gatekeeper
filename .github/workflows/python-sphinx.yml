@@ -1,0 +1,34 @@
+name: github pages
+on:
+  push:
+    branches:
+      - main  # Set a branch to deploy
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: Install dependencies
+      run: |
+        sudo apt-get update -y -qq
+        sudo apt-get install -y -qq pandoc
+        python -m pip install --upgrade pip
+        pip install sphinx sphinx_rtd_theme sphinx-copybutton
+
+    - name: build docs
+      run: |
+        pandoc -f markdown -t rst -o docs/readme.rst README.md
+        sphinx-build docs/ ./pages
+
+    - name: pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./pages
