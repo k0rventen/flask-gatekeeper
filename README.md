@@ -13,30 +13,39 @@ It has the following specificities:
 - in-memory configuration (no persistence)
 
 
-## Install
+## Getting started
+
+### Install
 
 ```
-pip install flask-gatekeeper==0.3.2
+pip install flask-gatekeeper
 ```
 
-## Usage
+### Basic usage
 
-Here is a demo app showing the capabilities of flask-gatekeeper : 
+Import flask-gatekeeper along flask
 
 ```py
 from flask import Flask
-from flask_gatekeeper import GateKeeper # important
+from flask_gatekeeper import GateKeeper
+```
 
-# create our flask app 
-app = Flask(__name__)
+then after creating the flask app, create the Gatekeeper instance:
 
-# add our GateKeeper instance with global rules
+```py
 gk = GateKeeper(app=app, # link to our app now or use .init_app(app) later.
-                ban_rule=[3,60,600], # will ban for 600s if an IP is reported using `gk.report()` 3 times in a 60s window.
-                rate_limit_rule=[100,60] # will rate limit if an IP makes more than 100 request in a 60s window.
-                ) 
+                ip_header="X-Forwarded-For", # optionnaly specify a header for the IP (e.g. if using a reverse proxy in front)
+                ban_rule=[3,60,600], # will ban for 600s if an IP is reported using `.report()` 3 times in a 60s window.
+                rate_limit_rule=[100,60]) # will rate limit if an IP makes more than 100 request in a 60s window.
+```
 
+By default, routes will use the rate limiting of the previously created instance:
 
+- Rate limiting is applied automatically by counting the number of requests. 
+- Banning uses the `.report()` function. This function can be used when a provided password is incorrect, or when you define an 
+abnormal behavior that should lead to banning.
+
+```py
 @app.route("/ping") # this route is rate limited by the global rule
 def ping():
     return "ok",200
@@ -48,17 +57,68 @@ def login():
     else:
         gk.report() # report that IP
         return "bad password",401
+```
+
+Finally, you can specify custom rules for a given route, using decorators:
+
+```py
+@app.route("/global_plus_specific")
+@gk.specific(rate_limit_rule=[1,10]) # add another rate limit on top of the global one (to avoid bursting for example)
+def specific():
+    return "ok",200
+
+@app.route("/standalone")
+@gk.specific(rate_limit_rule=[1,10],standalone=True) # rate limited only by this rule
+def standalone():
+    return "ok",200
+
+@app.route("/bypass")
+@gk.bypass # do not apply anything on that route
+def bypass():
+    return "ok",200
+```
+
+
+
+### Complete example
+
+Here is a demo app showing the main capabilities of flask-gatekeeper : 
+
+```py
+from flask import Flask, request
+from flask_gatekeeper import GateKeeper
+
+
+app = Flask(__name__)
+
+# add our GateKeeper instance with global rules
+gk = GateKeeper(app=app, # link to our app now or use .init_app(app) later.
+                # ip_header="X-Forwarded-For", # optionnaly specify a header for the IP (e.g. if using a reverse proxy in front)
+                ban_rule=[3,60,600], # will ban for 600s if an IP is reported using `gk.report()` 3 times in a 60s window.
+                rate_limit_rule=[100,60]) # will rate limit if an IP makes more than 100 request in a 60s window.
+
+
+@app.route("/ping") # this route is rate limited by the global rule
+def ping():
+    return "ok",200
+
+@app.route("/login") # also rate limited by the global rule
+def login():
+    if request.json.get("password") == "password":
+        return token,200
+    else:
+        gk.report() # report that IP
+        return "bad password",401
 
 @app.route("/global_plus_specific")
 @gk.specific(rate_limit_rule=[1,10]) # add another rate limit on top of the global one (to avoid bursting for example)
 def specific():
     return "ok",200
 
-@app.route("/standalone_specific")
+@app.route("/standalone")
 @gk.specific(rate_limit_rule=[1,10],standalone=True) # rate limited only by this rule
-def specific():
+def standalone():
     return "ok",200
-
 
 @app.route("/bypass")
 @gk.bypass # do not apply anything on that route
@@ -68,3 +128,5 @@ def bypass():
 
 app.run("127.0.0.1",5000)
 ```
+
+Copy that in a file or your REPL, then try the various endpoints.
