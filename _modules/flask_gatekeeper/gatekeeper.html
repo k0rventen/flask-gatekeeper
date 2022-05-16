@@ -105,19 +105,18 @@
 <span class="sd">        Rate limiting is done automatically, </span>
 <span class="sd">        but you have to specify when an IP should be reported, using `.report()` (usually in your login route when the creds are not valid)</span>
 
+<span class="sd">        ban_rule should be a dict {&quot;count&quot;:int,&quot;window&quot;:int,&quot;duration&quot;:int} where</span>
+<span class="sd">        - count is the number of reports before actually banning the IP</span>
+<span class="sd">        - window is the rolling time window to look for ban reports</span>
+<span class="sd">        - duration is the duration of the ban in seconds.</span>
 
-<span class="sd">        ban_rule should be a list [&lt;ban_count&gt;,&lt;ban_window&gt;,&lt;ban_duration&gt;] where</span>
-<span class="sd">        - ban_count is the number of reports before actually banning the IP</span>
-<span class="sd">        - ban_window is the rolling time window to look for ban reports</span>
-<span class="sd">        - ban_duration is the duration of the ban in seconds.</span>
+<span class="sd">        rate_limit_rules should be a list [{&quot;count&quot;:int,&quot;window&quot;:int},..] where</span>
+<span class="sd">        - count is the maximum number of requests </span>
+<span class="sd">        - window is the rolling time window for the rate count.</span>
 
-<span class="sd">        rate_limit_rule should be a list [&lt;rate_count&gt;,&lt;rate_window&gt;] where</span>
-<span class="sd">        - rate_count is the maximum number of requests </span>
-<span class="sd">        - rate_window is the rolling time window for the rate count.</span>
-
-<span class="sd">        As an example, ban_rule=[3,60,600], rate_limit_rule=[100,10] would:</span>
+<span class="sd">        As an example, ban_rule={&quot;count&quot;:3,&quot;window&quot;:60,&quot;duration&quot;:600}, rate_limit_rules=[{&quot;count&quot;:20,&quot;window&quot;:1},{&quot;count&quot;:100,&quot;window&quot;:10}] would:</span>
 <span class="sd">        - ban any IP for 600s if it has been reported 3 times in the last 60s,</span>
-<span class="sd">        - rate limit any IP if it has made more than 100 requests in the last 10s.</span>
+<span class="sd">        - rate limit any IP if it has made more than 20 requests in the last 1s or more than 100 requests in a 10s window.</span>
 
 <span class="sd">        If you do not set ban_rule, no banning will be done. Same goes for the rate limiting.</span>
 
@@ -125,16 +124,14 @@
 
 <span class="sd">        You can delay the init by omitting `app` here and calling `.init_app()` later.</span>
 
-<span class="sd">        If you set ip_header but the header is not present in the request, it falls back to a &quot;no-ip&quot; string, and any request made by potentially different clients will be added to this.</span>
-
-<span class="sd">        ban_func &amp; rate_limit_func should be functions with 3 parameters that returns a string. </span>
-<span class="sd">        The parameters are ban_count/rate_limit, time_window, retry_in.</span>
+<span class="sd">        If you set ip_header but the header is not present in the request, it falls back to the client seen by flask (which might be the proxy&#39;s IP if using one) string, and any request made by potentially different clients will be added to this.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            app (flask.Flask, optional): Flask app to wrap around. Defaults to None.</span>
 <span class="sd">            ban_rule (dict, optional): Global ban rule for the whole app. Defaults to None.</span>
 <span class="sd">            rate_limit_rules (list, optional): Global rate limit rules for the whole app. Defaults to None.</span>
 <span class="sd">            ip_header (str, optional): Header to check for the IP. useful with a proxy that will add a header with the ip of the actual client. Defaults to request.remote_addr.</span>
+<span class="sd">            excluded_methods (str, optional): Types of requests to ignore when counting requests. Can be GET, POST, HEAD, OPTIONS.. Defaults to None.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ban_rule</span> <span class="o">=</span> <span class="n">ban_rule</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ban_count</span> <span class="o">=</span> <span class="n">ban_rule</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">ban_rule</span> <span class="k">else</span> <span class="mi">0</span>
@@ -149,12 +146,28 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">init_app</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_ban_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ban_infos</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;internal func for creating a http response when the client is banned. </span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ban_infos (dict): dict containing the infos about the ban</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Response: ready to be server response with 403 http code and retry after header</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ban_response</span> <span class="o">=</span> <span class="n">Response</span><span class="p">(</span><span class="s2">&quot;ip </span><span class="si">{}</span><span class="s2"> banned for </span><span class="si">{}</span><span class="s2">s (reported </span><span class="si">{}</span><span class="s2"> times in a </span><span class="si">{}</span><span class="s2">s window)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">ban_infos</span><span class="p">[</span><span class="s2">&quot;ip&quot;</span><span class="p">],</span> <span class="n">ban_infos</span><span class="p">[</span><span class="s2">&quot;retry&quot;</span><span class="p">],</span> <span class="n">ban_infos</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">],</span> <span class="n">ban_infos</span><span class="p">[</span><span class="s2">&quot;window&quot;</span><span class="p">]),</span> <span class="n">status</span><span class="o">=</span><span class="mi">403</span><span class="p">)</span>
         <span class="n">ban_response</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s2">&quot;Retry-After&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ban_infos</span><span class="p">[</span><span class="s2">&quot;retry&quot;</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">ban_response</span>
 
     <span class="k">def</span> <span class="nf">_rate_limit_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rate_limit_infos</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;internal func for creating a http response when the client is being rate limited.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            rate_limit_infos (dict): dict containing the infos about the rate limiting</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Response: ready to be served response with 429 http code and retry after header</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">rate_limit_response</span> <span class="o">=</span> <span class="n">Response</span><span class="p">(</span><span class="s2">&quot;ip </span><span class="si">{}</span><span class="s2"> rate limited for </span><span class="si">{}</span><span class="s2">s (over </span><span class="si">{}</span><span class="s2"> requests in a </span><span class="si">{}</span><span class="s2">s window)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">rate_limit_infos</span><span class="p">[</span><span class="s2">&quot;ip&quot;</span><span class="p">],</span> <span class="n">rate_limit_infos</span><span class="p">[</span><span class="s2">&quot;retry&quot;</span><span class="p">],</span> <span class="n">rate_limit_infos</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">],</span> <span class="n">rate_limit_infos</span><span class="p">[</span><span class="s2">&quot;window&quot;</span><span class="p">]),</span> <span class="n">status</span><span class="o">=</span><span class="mi">429</span><span class="p">)</span>
         <span class="n">rate_limit_response</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s2">&quot;Retry-After&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rate_limit_infos</span><span class="p">[</span><span class="s2">&quot;retry&quot;</span><span class="p">]</span>
@@ -232,8 +245,12 @@
         <span class="n">app</span><span class="o">.</span><span class="n">before_request</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_before_request</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="GateKeeper.report"><a class="viewcode-back" href="../../gatekeeper.html#flask_gatekeeper.gatekeeper.GateKeeper.report">[docs]</a>    <span class="k">def</span> <span class="nf">report</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Report an IP. </span>
+        <span class="sd">&quot;&quot;&quot;Report the client who made the request, increasing its tally towards being banned.</span>
+<span class="sd">        </span>
 <span class="sd">        If no ip arg is provided, uses the ip_header arg provided to the GateKeeper instance</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ip (str, optional): IP to ban. Defaults to None.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">client_ip</span> <span class="o">=</span> <span class="n">ip</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_ip</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">client_ip</span><span class="p">]</span><span class="o">.</span><span class="n">add_report</span><span class="p">()</span></div>
