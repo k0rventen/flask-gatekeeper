@@ -3,7 +3,7 @@ flask-gatekeeper
 
 A simple banning & rate limiting extension for Flask.
 
-|PyPI|
+|PyPI - Status| |PyPI - Version| |PyPI - Downloads|
 
 It’s not meant to be a replacement for other, more complex banning &
 rate limiting modules like ``flask-Limiter`` or ``flask-ipban``.
@@ -82,5 +82,8 @@ Here is a demo app showing the main capabilities of flask-gatekeeper :
 
 Copy that in a file or your REPL, then try the various endpoints.
 
-.. |PyPI| image:: https://img.shields.io/pypi/v/flask-gatekeeper.svg
+.. |PyPI - Status| image:: https://img.shields.io/badge/status-stable-green
+.. |PyPI - Version| image:: https://img.shields.io/pypi/v/flask-gatekeeper.svg
    :target: https://pypi.org/project/flask-gatekeeper/
+.. |PyPI - Downloads| image:: https://img.shields.io/pypi/dm/flask-gatekeeper
+

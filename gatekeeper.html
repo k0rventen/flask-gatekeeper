@@ -82,7 +82,36 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="flask_gatekeeper.gatekeeper.GateKeeper">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">GateKeeper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">flask.app.Flask</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ban_rule</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_limit_rules</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ip_header</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">excluded_methods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flask_gatekeeper/gatekeeper.html#GateKeeper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#flask_gatekeeper.gatekeeper.GateKeeper" title="Permalink to this definition"></a></dt>
-<dd><dl class="py method">
+<dd><p>GateKeeper instance around a flask app.</p>
+<p>Provides rate-limiting &amp; ban functions.</p>
+<p>Rate limiting is done automatically,
+but you have to specify when an IP should be reported, using <cite>.report()</cite> (usually in your login route when the creds are not valid)</p>
+<p>ban_rule should be a dict {“count”:int,”window”:int,”duration”:int} where
+- count is the number of reports before actually banning the IP
+- window is the rolling time window to look for ban reports
+- duration is the duration of the ban in seconds.</p>
+<p>rate_limit_rules should be a list [{“count”:int,”window”:int},..] where
+- count is the maximum number of requests
+- window is the rolling time window for the rate count.</p>
+<p>As an example, ban_rule={“count”:3,”window”:60,”duration”:600}, rate_limit_rules=[{“count”:20,”window”:1},{“count”:100,”window”:10}] would:
+- ban any IP for 600s if it has been reported 3 times in the last 60s,
+- rate limit any IP if it has made more than 20 requests in the last 1s or more than 100 requests in a 10s window.</p>
+<p>If you do not set ban_rule, no banning will be done. Same goes for the rate limiting.</p>
+<p>Requests made during the rate limiting period or ban period are not counted.</p>
+<p>You can delay the init by omitting <cite>app</cite> here and calling <cite>.init_app()</cite> later.</p>
+<p>If you set ip_header but the header is not present in the request, it falls back to the client seen by flask (which might be the proxy’s IP if using one) string, and any request made by potentially different clients will be added to this.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>app</strong> (<em>flask.Flask</em><em>, </em><em>optional</em>) – Flask app to wrap around. Defaults to None.</p></li>
+<li><p><strong>ban_rule</strong> (<em>dict</em><em>, </em><em>optional</em>) – Global ban rule for the whole app. Defaults to None.</p></li>
+<li><p><strong>rate_limit_rules</strong> (<em>list</em><em>, </em><em>optional</em>) – Global rate limit rules for the whole app. Defaults to None.</p></li>
+<li><p><strong>ip_header</strong> (<em>str</em><em>, </em><em>optional</em>) – Header to check for the IP. useful with a proxy that will add a header with the ip of the actual client. Defaults to request.remote_addr.</p></li>
+<li><p><strong>excluded_methods</strong> (<em>str</em><em>, </em><em>optional</em>) – Types of requests to ignore when counting requests. Can be GET, POST, HEAD, OPTIONS.. Defaults to None.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
 <dt class="sig sig-object py" id="flask_gatekeeper.gatekeeper.GateKeeper.bypass">
 <span class="sig-name descname"><span class="pre">bypass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">route</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flask_gatekeeper/gatekeeper.html#GateKeeper.bypass"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#flask_gatekeeper.gatekeeper.GateKeeper.bypass" title="Permalink to this definition"></a></dt>
 <dd><p>do not apply rate-limiting to this route</p>
@@ -121,7 +150,16 @@ If you want to set a unique rate limite rule, set <cite>standalone</cite> to Tru
 <dl class="py class">
 <dt class="sig sig-object py" id="flask_gatekeeper.gatekeeper.IP">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">IP</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ban_count</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_count</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flask_gatekeeper/gatekeeper.html#IP"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#flask_gatekeeper.gatekeeper.IP" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>IP record that keeps track of reports and requests made by that IP.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ban_count</strong> (<em>int</em>) – number of reports to keep</p></li>
+<li><p><strong>rate_count</strong> (<em>int</em>) – number of requests to keep</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 </section>
 </section>
