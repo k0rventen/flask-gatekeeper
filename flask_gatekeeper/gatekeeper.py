@@ -1,11 +1,10 @@
-"""A (very) simple banning & rate limiting extension for Flask.
+"""A simple banning & rate limiting extension for Flask.
 """
-from inspect import signature
 import time
 from collections import deque
 from functools import wraps
 
-from flask import request
+from flask import Flask, Response, request
 
 
 class IP:
@@ -14,11 +13,11 @@ class IP:
 
         Args:
             ban_count (int): number of reports to keep
-            rate_count (int): number of requets to keep
+            rate_count (int): number of requests to keep
         """
-        self.ban_active = False
         self.ban_entries = deque(maxlen=ban_count)
         self.rate_entries = deque(maxlen=rate_count)
+        self.ban_active_until = 0
 
         # setters
         self.add_report = lambda: self.ban_entries.append(time.time())
@@ -26,7 +25,7 @@ class IP:
 
 
 class GateKeeper:
-    def __init__(self, app=None, ban_rule=None, rate_limit_rule=None, ip_header=None, rate_limit_func=None, ban_func=None):
+    def __init__(self, app: Flask = None, ban_rule: dict = None, rate_limit_rules: list = None, ip_header: str = None, excluded_methods: list = None):
         """GateKeeper instance around a flask app.
 
         Provides rate-limiting & ban functions.
@@ -61,57 +60,44 @@ class GateKeeper:
 
         Args:
             app (flask.Flask, optional): Flask app to wrap around. Defaults to None.
-            ban_rule (list, optional): Global ban rule for the whole app. Defaults to None.
-            rate_limit_rule (list, optional): Global rate limit rule for the whole app. Defaults to None.
+            ban_rule (dict, optional): Global ban rule for the whole app. Defaults to None.
+            rate_limit_rules (list, optional): Global rate limit rules for the whole app. Defaults to None.
             ip_header (str, optional): Header to check for the IP. useful with a proxy that will add a header with the ip of the actual client. Defaults to request.remote_addr.
-            rate_limit_func(function, optional): Function that can be used for the body of the response when rate-limited
-            ban_func(function, optional): Function that can be used for the body of the response when banned
         """
-        if ban_rule:
-            self.ban_enabled = True
-            self.ban_count = ban_rule[0]
-            self.ban_window = ban_rule[1]
-            self.ban_duration = ban_rule[2]
-        else:
-            self.ban_enabled = False
+        self.ban_rule = ban_rule
+        self.ban_count = ban_rule["count"] if ban_rule else 0
+        self.rate_limit_rules = rate_limit_rules
+        self.rate_count = max([r["count"] for r in rate_limit_rules]) if rate_limit_rules else 0
 
-        if rate_limit_rule:
-            self.rate_limit_enabled = True
-            self.rate_count = rate_limit_rule[0]
-            self.rate_window = rate_limit_rule[1]
-        else:
-            self.rate_limit_enabled = False
-
-        if callable(rate_limit_func) and len(signature(rate_limit_func).parameters) == 3:
-            self._rate_limit_func = rate_limit_func
-        else:
-            self._rate_limit_func = lambda rate_limit, rate_window, retry_in: "rate-limited for {}s (over {} requests in a {}s window)".format(
-                retry_in, rate_limit, rate_window)
-
-        if callable(ban_func) and len(signature(ban_func).parameters) == 3:
-            self._ban_func = ban_func
-        else:
-            self._ban_func = lambda ban_count, ban_window, retry_in: "banned for {}s (reported {} times in a {}s window)".format(
-                retry_in, ban_count, ban_window)
-
+        self.excluded_methods = excluded_methods or []
         self.ip_header = ip_header
         self.ips = {}
         self.bypass_routes = set()
         if app:
             self.init_app(app)
 
+    def _ban_func(self, ban_infos):
+        ban_response = Response("ip {} banned for {}s (reported {} times in a {}s window)".format(
+            ban_infos["ip"], ban_infos["retry"], ban_infos["count"], ban_infos["window"]), status=403)
+        ban_response.headers["Retry-After"] = ban_infos["retry"]
+        return ban_response
+
+    def _rate_limit_func(self, rate_limit_infos):
+        rate_limit_response = Response("ip {} rate limited for {}s (over {} requests in a {}s window)".format(
+            rate_limit_infos["ip"], rate_limit_infos["retry"], rate_limit_infos["count"], rate_limit_infos["window"]), status=429)
+        rate_limit_response.headers["Retry-After"] = rate_limit_infos["retry"]
+        return rate_limit_response
+
     def _get_ip(self) -> str:
         """Returns the IP of the client"""
         if self.ip_header:
-            return request.headers.get(self.ip_header) or "no-ip"
-
+            return request.headers.get(self.ip_header,request.remote_addr)
         return request.remote_addr
 
     def _create(self, ip):
         """add the IP to the tracked dict"""
         if ip not in self.ips:
-            self.ips[ip] = IP(ban_count=self.ban_count if self.ban_enabled else 0,
-                              rate_count=self.rate_count if self.rate_limit_enabled else 0)
+            self.ips[ip] = IP(ban_count=self.ban_count, rate_count=self.rate_count)
 
     def _before_request(self):
         """Function which runs before every request
@@ -119,55 +105,61 @@ class GateKeeper:
            if the client is either banned or rate-limited, we short-circuit the response 
            and reply directly with the appropriate message.
         """
-        if request.endpoint not in self.bypass_routes:  # avoid routes with the @bypass decorator, or if they use specific limits with override
+        if request.method not in self.excluded_methods and request.endpoint not in self.bypass_routes:
             ip = self._get_ip()
             self._create(ip)
 
-            if self.ban_enabled and self._is_ip_banned(ip):
-                return self._ban_func(self.ban_count, self.ban_window, self._banned_for(ip)), 403
-            if self.rate_limit_enabled and self._is_ip_rate_limited(ip):
-                return self._rate_limit_func(self.rate_count, self.rate_window, self._rate_limited_for(ip)), 429
-            self._add(ip)
+            if self.ban_rule:
+                is_banned = self._is_ip_banned(ip)
+                if is_banned:
+                    return self._ban_func(is_banned)
 
-    def _add(self, ip):
-        """add a request to this IP tracked"""
-        self.ips[ip].add_entry()
-
-    def _banned_for(self, ip) -> int:
-        """returns the time in seconds this IP is banned for"""
-        return int((self.ips[ip].ban_entries[-1] + self.ban_duration) - time.time())
-
-    def _rate_limited_for(self, ip) -> int:
-        """returns the time in seconds this IP is rate limited for"""
-        rate_entries = [e for e in self.ips[ip].rate_entries if e >= time.time() - self.rate_window]
-        return int((rate_entries[0] + self.rate_window) - time.time()) or 0
+            if self.rate_limit_rules:
+                is_rate_limited = self._is_ip_rate_limited(ip)
+                if is_rate_limited:
+                    return self._rate_limit_func(is_rate_limited)
+            self.ips[ip].add_entry()
 
     def _is_ip_banned(self, ip) -> bool:
         """returns whether this IP is currently banned or not
         """
-        # have we too much counts for our interval
-        if not self.ips[ip].ban_active and len([e for e in self.ips[ip].ban_entries if e >= time.time() - self.ban_window]) >= self.ban_count:
-            self.ips[ip].ban_active = True
-        # is the last entry still in our ban duration ?
-        if self.ips[ip].ban_active:
-            if time.time() <= self.ips[ip].ban_entries[-1] + self.ban_duration:
-                return True
-            self.ips[ip].ban_active = False
+        # have we too much counts for any of our rules -> ban
+        time_now = time.time()
+        if not self.ips[ip].ban_active_until:
+            if len([e for e in self.ips[ip].ban_entries if e >= time_now - self.ban_rule["window"]]) >= self.ban_rule["count"]:
+                banned_for = int((self.ips[ip].ban_entries[-1] + self.ban_rule["duration"]) - time_now)
+                self.ips[ip].ban_active_until = time_now + banned_for
+                return {"ip": ip, "window": self.ban_rule["window"], "count": self.ban_rule["count"], "retry": int(banned_for)}
+            return None
 
-        return False
+        # is the ban duration over ? -> unban
+        if self.ips[ip].ban_active_until > time_now:
+            banned_for = self.ips[ip].ban_active_until - time_now
+            return {"ip": ip, "window": self.ban_rule["window"], "count": self.ban_rule["count"], "retry": int(banned_for)}
+        else:
+            self.ips[ip].ban_active_until = 0
+
+        return None
 
     def _is_ip_rate_limited(self, ip) -> bool:
         """returns whether this IP is currently rate limited or not"""
         # in the last rate_interval, did we had more entries than rate_count ?
-        if len([e for e in self.ips[ip].rate_entries if e >= time.time() - self.rate_window]) >= self.rate_count:
-            return True
-        return False
+        time_now = time.time()
+
+        for rule in self.rate_limit_rules:
+            rule_entries = [
+                e for e in self.ips[ip].rate_entries if e >= time_now - rule["window"]]
+            if len(rule_entries) >= rule["count"]:
+                retry_in = int(
+                    (rule_entries[0] + rule["window"]) - time_now) or 0
+                return {"ip": ip, "window": rule["window"], "count": rule["count"], "retry": retry_in}
+        return None
 
     def init_app(self, app):
         """add our before request to flask now"""
         app.before_request(self._before_request)
 
-    def report(self, ip=None):
+    def report(self, ip:str=None):
         """Report an IP. 
         If no ip arg is provided, uses the ip_header arg provided to the GateKeeper instance
         """
@@ -184,7 +176,7 @@ class GateKeeper:
         self.bypass_routes.add(route.__name__)
         return wrapper
 
-    def specific(self, rate_limit_rule, standalone=False, ip_header=None):
+    def specific(self, rate_limit_rules:list=[], standalone:bool=False):
         """Route specific gatekeeper. Only for rate limiting purposes.
 
         By defaults the specific rate_limit rule is set on top of the global instance rule. 
@@ -193,8 +185,7 @@ class GateKeeper:
 
         You can supply a different ip_header, otherwise it will default to the instance configuration.
         """
-        specific_gk = GateKeeper(rate_limit_rule=rate_limit_rule,
-                                 ip_header=ip_header or self.ip_header)
+        specific_gk = GateKeeper(rate_limit_rules=rate_limit_rules,ip_header=self.ip_header)
 
         def decorator(route):
             @wraps(route)
@@ -205,10 +196,12 @@ class GateKeeper:
                 ip = specific_gk._get_ip()
                 specific_gk._create(ip)
 
-                if specific_gk.rate_limit_enabled and specific_gk._is_ip_rate_limited(ip):
-                    return self._rate_limit_func(specific_gk.rate_count, specific_gk.rate_window, specific_gk._rate_limited_for(ip)), 429
+                if specific_gk.rate_limit_rules:
+                    rate_limited = specific_gk._is_ip_rate_limited(ip)
+                    if rate_limited:
+                        return self._rate_limit_func(rate_limited)
 
-                specific_gk._add(ip)
+                specific_gk.ips[ip].add_entry()
                 return route(*args, **kwargs)
 
             # remove ourselves from the global instance _before_request
