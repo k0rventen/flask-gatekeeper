@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>flask_gatekeeper code documentation &mdash; flask-gatekeeper 0.3.3 documentation</title>
+  <title>flask_gatekeeper code documentation &mdash; flask-gatekeeper 1.0.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
@@ -32,7 +32,7 @@
             <a href="index.html" class="icon icon-home"> flask-gatekeeper
           </a>
               <div class="version">
-                0.3.3
+                1.0.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -78,10 +78,10 @@
 <h1>flask_gatekeeper code documentation<a class="headerlink" href="#flask-gatekeeper-code-documentation" title="Permalink to this headline"></a></h1>
 <section id="module-flask_gatekeeper.gatekeeper">
 <span id="gatekeeper"></span><h2>Gatekeeper()<a class="headerlink" href="#module-flask_gatekeeper.gatekeeper" title="Permalink to this headline"></a></h2>
-<p>A (very) simple banning &amp; rate limiting extension for Flask.</p>
+<p>A simple banning &amp; rate limiting extension for Flask.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="flask_gatekeeper.gatekeeper.GateKeeper">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">GateKeeper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ban_rule</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_limit_rule</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ip_header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_limit_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ban_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flask_gatekeeper/gatekeeper.html#GateKeeper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#flask_gatekeeper.gatekeeper.GateKeeper" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">GateKeeper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">flask.app.Flask</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ban_rule</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_limit_rules</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ip_header</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">excluded_methods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flask_gatekeeper/gatekeeper.html#GateKeeper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#flask_gatekeeper.gatekeeper.GateKeeper" title="Permalink to this definition"></a></dt>
 <dd><dl class="py method">
 <dt class="sig sig-object py" id="flask_gatekeeper.gatekeeper.GateKeeper.bypass">
 <span class="sig-name descname"><span class="pre">bypass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">route</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flask_gatekeeper/gatekeeper.html#GateKeeper.bypass"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#flask_gatekeeper.gatekeeper.GateKeeper.bypass" title="Permalink to this definition"></a></dt>
@@ -96,14 +96,14 @@
 
 <dl class="py method">
 <dt class="sig sig-object py" id="flask_gatekeeper.gatekeeper.GateKeeper.report">
-<span class="sig-name descname"><span class="pre">report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flask_gatekeeper/gatekeeper.html#GateKeeper.report"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#flask_gatekeeper.gatekeeper.GateKeeper.report" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flask_gatekeeper/gatekeeper.html#GateKeeper.report"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#flask_gatekeeper.gatekeeper.GateKeeper.report" title="Permalink to this definition"></a></dt>
 <dd><p>Report an IP.
 If no ip arg is provided, uses the ip_header arg provided to the GateKeeper instance</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="flask_gatekeeper.gatekeeper.GateKeeper.specific">
-<span class="sig-name descname"><span class="pre">specific</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rate_limit_rule</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standalone</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ip_header</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flask_gatekeeper/gatekeeper.html#GateKeeper.specific"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#flask_gatekeeper.gatekeeper.GateKeeper.specific" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">specific</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rate_limit_rules</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standalone</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flask_gatekeeper/gatekeeper.html#GateKeeper.specific"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#flask_gatekeeper.gatekeeper.GateKeeper.specific" title="Permalink to this definition"></a></dt>
 <dd><p>Route specific gatekeeper. Only for rate limiting purposes.</p>
 <p>By defaults the specific rate_limit rule is set on top of the global instance rule.
 A use-case could be a global per-minute rule, and a per-second bursting rule here
@@ -115,7 +115,7 @@ If you want to set a unique rate limite rule, set <cite>standalone</cite> to Tru
 
 <dl class="py class">
 <dt class="sig sig-object py" id="flask_gatekeeper.gatekeeper.IP">
-<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">IP</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ban_count</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_count</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flask_gatekeeper/gatekeeper.html#IP"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#flask_gatekeeper.gatekeeper.IP" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">IP</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ban_count</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate_count</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/flask_gatekeeper/gatekeeper.html#IP"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#flask_gatekeeper.gatekeeper.IP" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 </section>
@@ -131,7 +131,7 @@ If you want to set a unique rate limite rule, set <cite>standalone</cite> to Tru
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021, k0rventen.</p>
+    <p>&#169; Copyright 2022, k0rventen.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

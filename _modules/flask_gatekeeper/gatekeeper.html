@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>flask_gatekeeper.gatekeeper &mdash; flask-gatekeeper 0.3.3 documentation</title>
+  <title>flask_gatekeeper.gatekeeper &mdash; flask-gatekeeper 1.0.0 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/copybutton.css" type="text/css" />
@@ -30,7 +30,7 @@
             <a href="../../index.html" class="icon icon-home"> flask-gatekeeper
           </a>
               <div class="version">
-                0.3.3
+                1.0.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -70,14 +70,13 @@
            <div itemprop="articleBody">
              
   <h1>Source code for flask_gatekeeper.gatekeeper</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;A (very) simple banning &amp; rate limiting extension for Flask.</span>
+<span></span><span class="sd">&quot;&quot;&quot;A simple banning &amp; rate limiting extension for Flask.</span>
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">from</span> <span class="nn">inspect</span> <span class="kn">import</span> <span class="n">signature</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">deque</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
 
-<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">request</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">Response</span><span class="p">,</span> <span class="n">request</span>
 
 
 <div class="viewcode-block" id="IP"><a class="viewcode-back" href="../../gatekeeper.html#flask_gatekeeper.gatekeeper.IP">[docs]</a><span class="k">class</span> <span class="nc">IP</span><span class="p">:</span>
@@ -86,11 +85,11 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            ban_count (int): number of reports to keep</span>
-<span class="sd">            rate_count (int): number of requets to keep</span>
+<span class="sd">            rate_count (int): number of requests to keep</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ban_active</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ban_entries</span> <span class="o">=</span> <span class="n">deque</span><span class="p">(</span><span class="n">maxlen</span><span class="o">=</span><span class="n">ban_count</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">rate_entries</span> <span class="o">=</span> <span class="n">deque</span><span class="p">(</span><span class="n">maxlen</span><span class="o">=</span><span class="n">rate_count</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ban_active_until</span> <span class="o">=</span> <span class="mi">0</span>
 
         <span class="c1"># setters</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_report</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_entries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
@@ -98,7 +97,7 @@
 
 
 <div class="viewcode-block" id="GateKeeper"><a class="viewcode-back" href="../../gatekeeper.html#flask_gatekeeper.gatekeeper.GateKeeper">[docs]</a><span class="k">class</span> <span class="nc">GateKeeper</span><span class="p">:</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ban_rule</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rate_limit_rule</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ip_header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rate_limit_func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ban_func</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">Flask</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ban_rule</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">rate_limit_rules</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ip_header</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">excluded_methods</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;GateKeeper instance around a flask app.</span>
 
 <span class="sd">        Provides rate-limiting &amp; ban functions.</span>
@@ -133,57 +132,44 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            app (flask.Flask, optional): Flask app to wrap around. Defaults to None.</span>
-<span class="sd">            ban_rule (list, optional): Global ban rule for the whole app. Defaults to None.</span>
-<span class="sd">            rate_limit_rule (list, optional): Global rate limit rule for the whole app. Defaults to None.</span>
+<span class="sd">            ban_rule (dict, optional): Global ban rule for the whole app. Defaults to None.</span>
+<span class="sd">            rate_limit_rules (list, optional): Global rate limit rules for the whole app. Defaults to None.</span>
 <span class="sd">            ip_header (str, optional): Header to check for the IP. useful with a proxy that will add a header with the ip of the actual client. Defaults to request.remote_addr.</span>
-<span class="sd">            rate_limit_func(function, optional): Function that can be used for the body of the response when rate-limited</span>
-<span class="sd">            ban_func(function, optional): Function that can be used for the body of the response when banned</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">ban_rule</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ban_enabled</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ban_count</span> <span class="o">=</span> <span class="n">ban_rule</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ban_window</span> <span class="o">=</span> <span class="n">ban_rule</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ban_duration</span> <span class="o">=</span> <span class="n">ban_rule</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ban_enabled</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ban_rule</span> <span class="o">=</span> <span class="n">ban_rule</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ban_count</span> <span class="o">=</span> <span class="n">ban_rule</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">ban_rule</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rate_limit_rules</span> <span class="o">=</span> <span class="n">rate_limit_rules</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rate_count</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rate_limit_rules</span><span class="p">])</span> <span class="k">if</span> <span class="n">rate_limit_rules</span> <span class="k">else</span> <span class="mi">0</span>
 
-        <span class="k">if</span> <span class="n">rate_limit_rule</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">rate_limit_enabled</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">rate_count</span> <span class="o">=</span> <span class="n">rate_limit_rule</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">rate_window</span> <span class="o">=</span> <span class="n">rate_limit_rule</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">rate_limit_enabled</span> <span class="o">=</span> <span class="kc">False</span>
-
-        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">rate_limit_func</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">signature</span><span class="p">(</span><span class="n">rate_limit_func</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_rate_limit_func</span> <span class="o">=</span> <span class="n">rate_limit_func</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_rate_limit_func</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">rate_limit</span><span class="p">,</span> <span class="n">rate_window</span><span class="p">,</span> <span class="n">retry_in</span><span class="p">:</span> <span class="s2">&quot;rate-limited for </span><span class="si">{}</span><span class="s2">s (over </span><span class="si">{}</span><span class="s2"> requests in a </span><span class="si">{}</span><span class="s2">s window)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                <span class="n">retry_in</span><span class="p">,</span> <span class="n">rate_limit</span><span class="p">,</span> <span class="n">rate_window</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">ban_func</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">signature</span><span class="p">(</span><span class="n">ban_func</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_ban_func</span> <span class="o">=</span> <span class="n">ban_func</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_ban_func</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">ban_count</span><span class="p">,</span> <span class="n">ban_window</span><span class="p">,</span> <span class="n">retry_in</span><span class="p">:</span> <span class="s2">&quot;banned for </span><span class="si">{}</span><span class="s2">s (reported </span><span class="si">{}</span><span class="s2"> times in a </span><span class="si">{}</span><span class="s2">s window)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                <span class="n">retry_in</span><span class="p">,</span> <span class="n">ban_count</span><span class="p">,</span> <span class="n">ban_window</span><span class="p">)</span>
-
+        <span class="bp">self</span><span class="o">.</span><span class="n">excluded_methods</span> <span class="o">=</span> <span class="n">excluded_methods</span> <span class="ow">or</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ip_header</span> <span class="o">=</span> <span class="n">ip_header</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ips</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">bypass_routes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">app</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">init_app</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">_ban_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ban_infos</span><span class="p">):</span>
+        <span class="n">ban_response</span> <span class="o">=</span> <span class="n">Response</span><span class="p">(</span><span class="s2">&quot;ip </span><span class="si">{}</span><span class="s2"> banned for </span><span class="si">{}</span><span class="s2">s (reported </span><span class="si">{}</span><span class="s2"> times in a </span><span class="si">{}</span><span class="s2">s window)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">ban_infos</span><span class="p">[</span><span class="s2">&quot;ip&quot;</span><span class="p">],</span> <span class="n">ban_infos</span><span class="p">[</span><span class="s2">&quot;retry&quot;</span><span class="p">],</span> <span class="n">ban_infos</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">],</span> <span class="n">ban_infos</span><span class="p">[</span><span class="s2">&quot;window&quot;</span><span class="p">]),</span> <span class="n">status</span><span class="o">=</span><span class="mi">403</span><span class="p">)</span>
+        <span class="n">ban_response</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s2">&quot;Retry-After&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ban_infos</span><span class="p">[</span><span class="s2">&quot;retry&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">ban_response</span>
+
+    <span class="k">def</span> <span class="nf">_rate_limit_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rate_limit_infos</span><span class="p">):</span>
+        <span class="n">rate_limit_response</span> <span class="o">=</span> <span class="n">Response</span><span class="p">(</span><span class="s2">&quot;ip </span><span class="si">{}</span><span class="s2"> rate limited for </span><span class="si">{}</span><span class="s2">s (over </span><span class="si">{}</span><span class="s2"> requests in a </span><span class="si">{}</span><span class="s2">s window)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">rate_limit_infos</span><span class="p">[</span><span class="s2">&quot;ip&quot;</span><span class="p">],</span> <span class="n">rate_limit_infos</span><span class="p">[</span><span class="s2">&quot;retry&quot;</span><span class="p">],</span> <span class="n">rate_limit_infos</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">],</span> <span class="n">rate_limit_infos</span><span class="p">[</span><span class="s2">&quot;window&quot;</span><span class="p">]),</span> <span class="n">status</span><span class="o">=</span><span class="mi">429</span><span class="p">)</span>
+        <span class="n">rate_limit_response</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s2">&quot;Retry-After&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rate_limit_infos</span><span class="p">[</span><span class="s2">&quot;retry&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">rate_limit_response</span>
+
     <span class="k">def</span> <span class="nf">_get_ip</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Returns the IP of the client&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ip_header</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ip_header</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;no-ip&quot;</span>
-
+            <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ip_header</span><span class="p">,</span><span class="n">request</span><span class="o">.</span><span class="n">remote_addr</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">remote_addr</span>
 
     <span class="k">def</span> <span class="nf">_create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;add the IP to the tracked dict&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">ip</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span> <span class="o">=</span> <span class="n">IP</span><span class="p">(</span><span class="n">ban_count</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ban_count</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_enabled</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
-                              <span class="n">rate_count</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rate_count</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate_limit_enabled</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span> <span class="o">=</span> <span class="n">IP</span><span class="p">(</span><span class="n">ban_count</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ban_count</span><span class="p">,</span> <span class="n">rate_count</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rate_count</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_before_request</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Function which runs before every request</span>
@@ -191,55 +177,61 @@
 <span class="sd">           if the client is either banned or rate-limited, we short-circuit the response </span>
 <span class="sd">           and reply directly with the appropriate message.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">endpoint</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bypass_routes</span><span class="p">:</span>  <span class="c1"># avoid routes with the @bypass decorator, or if they use specific limits with override</span>
+        <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">excluded_methods</span> <span class="ow">and</span> <span class="n">request</span><span class="o">.</span><span class="n">endpoint</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bypass_routes</span><span class="p">:</span>
             <span class="n">ip</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_ip</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_create</span><span class="p">(</span><span class="n">ip</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_enabled</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_ip_banned</span><span class="p">(</span><span class="n">ip</span><span class="p">):</span>
-                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ban_func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ban_count</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_window</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_banned_for</span><span class="p">(</span><span class="n">ip</span><span class="p">)),</span> <span class="mi">403</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate_limit_enabled</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_ip_rate_limited</span><span class="p">(</span><span class="n">ip</span><span class="p">):</span>
-                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rate_limit_func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rate_count</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate_window</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rate_limited_for</span><span class="p">(</span><span class="n">ip</span><span class="p">)),</span> <span class="mi">429</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="n">ip</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_rule</span><span class="p">:</span>
+                <span class="n">is_banned</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_ip_banned</span><span class="p">(</span><span class="n">ip</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">is_banned</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ban_func</span><span class="p">(</span><span class="n">is_banned</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;add a request to this IP tracked&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">add_entry</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">_banned_for</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;returns the time in seconds this IP is banned for&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">int</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_entries</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_duration</span><span class="p">)</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
-
-    <span class="k">def</span> <span class="nf">_rate_limited_for</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;returns the time in seconds this IP is rate limited for&quot;&quot;&quot;</span>
-        <span class="n">rate_entries</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">rate_entries</span> <span class="k">if</span> <span class="n">e</span> <span class="o">&gt;=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate_window</span><span class="p">]</span>
-        <span class="k">return</span> <span class="nb">int</span><span class="p">((</span><span class="n">rate_entries</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate_window</span><span class="p">)</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span> <span class="ow">or</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate_limit_rules</span><span class="p">:</span>
+                <span class="n">is_rate_limited</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_ip_rate_limited</span><span class="p">(</span><span class="n">ip</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">is_rate_limited</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rate_limit_func</span><span class="p">(</span><span class="n">is_rate_limited</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">add_entry</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_is_ip_banned</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;returns whether this IP is currently banned or not</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># have we too much counts for our interval</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_active</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">([</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_entries</span> <span class="k">if</span> <span class="n">e</span> <span class="o">&gt;=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_window</span><span class="p">])</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_count</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_active</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="c1"># is the last entry still in our ban duration ?</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_active</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_entries</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_duration</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">True</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_active</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="c1"># have we too much counts for any of our rules -&gt; ban</span>
+        <span class="n">time_now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_active_until</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">([</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_entries</span> <span class="k">if</span> <span class="n">e</span> <span class="o">&gt;=</span> <span class="n">time_now</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_rule</span><span class="p">[</span><span class="s2">&quot;window&quot;</span><span class="p">]])</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_rule</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]:</span>
+                <span class="n">banned_for</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_entries</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_rule</span><span class="p">[</span><span class="s2">&quot;duration&quot;</span><span class="p">])</span> <span class="o">-</span> <span class="n">time_now</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_active_until</span> <span class="o">=</span> <span class="n">time_now</span> <span class="o">+</span> <span class="n">banned_for</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;ip&quot;</span><span class="p">:</span> <span class="n">ip</span><span class="p">,</span> <span class="s2">&quot;window&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_rule</span><span class="p">[</span><span class="s2">&quot;window&quot;</span><span class="p">],</span> <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_rule</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">],</span> <span class="s2">&quot;retry&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">banned_for</span><span class="p">)}</span>
+            <span class="k">return</span> <span class="kc">None</span>
 
-        <span class="k">return</span> <span class="kc">False</span>
+        <span class="c1"># is the ban duration over ? -&gt; unban</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_active_until</span> <span class="o">&gt;</span> <span class="n">time_now</span><span class="p">:</span>
+            <span class="n">banned_for</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_active_until</span> <span class="o">-</span> <span class="n">time_now</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;ip&quot;</span><span class="p">:</span> <span class="n">ip</span><span class="p">,</span> <span class="s2">&quot;window&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_rule</span><span class="p">[</span><span class="s2">&quot;window&quot;</span><span class="p">],</span> <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ban_rule</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">],</span> <span class="s2">&quot;retry&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">banned_for</span><span class="p">)}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">ban_active_until</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">_is_ip_rate_limited</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;returns whether this IP is currently rate limited or not&quot;&quot;&quot;</span>
         <span class="c1"># in the last rate_interval, did we had more entries than rate_count ?</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">([</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">rate_entries</span> <span class="k">if</span> <span class="n">e</span> <span class="o">&gt;=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate_window</span><span class="p">])</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate_count</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">True</span>
-        <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">time_now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">rule</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate_limit_rules</span><span class="p">:</span>
+            <span class="n">rule_entries</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">rate_entries</span> <span class="k">if</span> <span class="n">e</span> <span class="o">&gt;=</span> <span class="n">time_now</span> <span class="o">-</span> <span class="n">rule</span><span class="p">[</span><span class="s2">&quot;window&quot;</span><span class="p">]]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rule_entries</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">rule</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]:</span>
+                <span class="n">retry_in</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">rule_entries</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">rule</span><span class="p">[</span><span class="s2">&quot;window&quot;</span><span class="p">])</span> <span class="o">-</span> <span class="n">time_now</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;ip&quot;</span><span class="p">:</span> <span class="n">ip</span><span class="p">,</span> <span class="s2">&quot;window&quot;</span><span class="p">:</span> <span class="n">rule</span><span class="p">[</span><span class="s2">&quot;window&quot;</span><span class="p">],</span> <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="n">rule</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">],</span> <span class="s2">&quot;retry&quot;</span><span class="p">:</span> <span class="n">retry_in</span><span class="p">}</span>
+        <span class="k">return</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="GateKeeper.init_app"><a class="viewcode-back" href="../../gatekeeper.html#flask_gatekeeper.gatekeeper.GateKeeper.init_app">[docs]</a>    <span class="k">def</span> <span class="nf">init_app</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;add our before request to flask now&quot;&quot;&quot;</span>
         <span class="n">app</span><span class="o">.</span><span class="n">before_request</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_before_request</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="GateKeeper.report"><a class="viewcode-back" href="../../gatekeeper.html#flask_gatekeeper.gatekeeper.GateKeeper.report">[docs]</a>    <span class="k">def</span> <span class="nf">report</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="GateKeeper.report"><a class="viewcode-back" href="../../gatekeeper.html#flask_gatekeeper.gatekeeper.GateKeeper.report">[docs]</a>    <span class="k">def</span> <span class="nf">report</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Report an IP. </span>
 <span class="sd">        If no ip arg is provided, uses the ip_header arg provided to the GateKeeper instance</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -256,7 +248,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">bypass_routes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">route</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">wrapper</span></div>
 
-<div class="viewcode-block" id="GateKeeper.specific"><a class="viewcode-back" href="../../gatekeeper.html#flask_gatekeeper.gatekeeper.GateKeeper.specific">[docs]</a>    <span class="k">def</span> <span class="nf">specific</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rate_limit_rule</span><span class="p">,</span> <span class="n">standalone</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">ip_header</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="GateKeeper.specific"><a class="viewcode-back" href="../../gatekeeper.html#flask_gatekeeper.gatekeeper.GateKeeper.specific">[docs]</a>    <span class="k">def</span> <span class="nf">specific</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rate_limit_rules</span><span class="p">:</span><span class="nb">list</span><span class="o">=</span><span class="p">[],</span> <span class="n">standalone</span><span class="p">:</span><span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Route specific gatekeeper. Only for rate limiting purposes.</span>
 
 <span class="sd">        By defaults the specific rate_limit rule is set on top of the global instance rule. </span>
@@ -265,8 +257,7 @@
 
 <span class="sd">        You can supply a different ip_header, otherwise it will default to the instance configuration.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">specific_gk</span> <span class="o">=</span> <span class="n">GateKeeper</span><span class="p">(</span><span class="n">rate_limit_rule</span><span class="o">=</span><span class="n">rate_limit_rule</span><span class="p">,</span>
-                                 <span class="n">ip_header</span><span class="o">=</span><span class="n">ip_header</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">ip_header</span><span class="p">)</span>
+        <span class="n">specific_gk</span> <span class="o">=</span> <span class="n">GateKeeper</span><span class="p">(</span><span class="n">rate_limit_rules</span><span class="o">=</span><span class="n">rate_limit_rules</span><span class="p">,</span><span class="n">ip_header</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ip_header</span><span class="p">)</span>
 
         <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">route</span><span class="p">):</span>
             <span class="nd">@wraps</span><span class="p">(</span><span class="n">route</span><span class="p">)</span>
@@ -277,10 +268,12 @@
                 <span class="n">ip</span> <span class="o">=</span> <span class="n">specific_gk</span><span class="o">.</span><span class="n">_get_ip</span><span class="p">()</span>
                 <span class="n">specific_gk</span><span class="o">.</span><span class="n">_create</span><span class="p">(</span><span class="n">ip</span><span class="p">)</span>
 
-                <span class="k">if</span> <span class="n">specific_gk</span><span class="o">.</span><span class="n">rate_limit_enabled</span> <span class="ow">and</span> <span class="n">specific_gk</span><span class="o">.</span><span class="n">_is_ip_rate_limited</span><span class="p">(</span><span class="n">ip</span><span class="p">):</span>
-                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rate_limit_func</span><span class="p">(</span><span class="n">specific_gk</span><span class="o">.</span><span class="n">rate_count</span><span class="p">,</span> <span class="n">specific_gk</span><span class="o">.</span><span class="n">rate_window</span><span class="p">,</span> <span class="n">specific_gk</span><span class="o">.</span><span class="n">_rate_limited_for</span><span class="p">(</span><span class="n">ip</span><span class="p">)),</span> <span class="mi">429</span>
+                <span class="k">if</span> <span class="n">specific_gk</span><span class="o">.</span><span class="n">rate_limit_rules</span><span class="p">:</span>
+                    <span class="n">rate_limited</span> <span class="o">=</span> <span class="n">specific_gk</span><span class="o">.</span><span class="n">_is_ip_rate_limited</span><span class="p">(</span><span class="n">ip</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">rate_limited</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rate_limit_func</span><span class="p">(</span><span class="n">rate_limited</span><span class="p">)</span>
 
-                <span class="n">specific_gk</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="n">ip</span><span class="p">)</span>
+                <span class="n">specific_gk</span><span class="o">.</span><span class="n">ips</span><span class="p">[</span><span class="n">ip</span><span class="p">]</span><span class="o">.</span><span class="n">add_entry</span><span class="p">()</span>
                 <span class="k">return</span> <span class="n">route</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
             <span class="c1"># remove ourselves from the global instance _before_request</span>
@@ -298,7 +291,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021, k0rventen.</p>
+    <p>&#169; Copyright 2022, k0rventen.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
