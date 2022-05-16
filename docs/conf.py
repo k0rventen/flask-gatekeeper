@@ -8,11 +8,9 @@ import flask_gatekeeper
 # -- Project information -----------------------------------------------------
 
 project = 'flask-gatekeeper'
-copyright = '2021, k0rventen'
+copyright = '2022, k0rventen'
 author = 'k0rventen'
 
-# The full version, including alpha/beta/rc tags
-release = '0.3.3'
 # Configuration file for the Sphinx documentation builder.
 
 version = flask_gatekeeper.__version__
