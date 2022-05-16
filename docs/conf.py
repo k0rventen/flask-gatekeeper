@@ -20,6 +20,7 @@ release = flask_gatekeeper.__version__
 extensions = ['sphinx.ext.autodoc','sphinx.ext.viewcode','sphinx.ext.napoleon', 'sphinx.ext.todo','sphinx_copybutton']
 
 add_module_names = False
+autoclass_content = 'both'
 
 html_theme = 'sphinx_rtd_theme'
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
