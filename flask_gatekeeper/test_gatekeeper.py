@@ -1,4 +1,4 @@
-from random import randint
+# tests for flask-gatekeeper
 from time import sleep
 
 import pytest

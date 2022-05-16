@@ -8,9 +8,10 @@ A simple banning & rate limiting extension for Flask.
 It's not meant to be a replacement for other, more complex banning & rate limiting modules like `flask-Limiter` or `flask-ipban`.
 
 It has the following specificities:
+
 - no dependencies,
 - quite fast due to the use of `collections.deque`,
-- in-memory storage (no persistence across restarts)
+- in-memory storage (no persistence across restarts).
 
 Full documentation can be found here: https://k0rventen.github.io/flask-gatekeeper/
 
@@ -34,7 +35,7 @@ from flask import Flask
 from flask_gatekeeper import GateKeeper 
 
 app = Flask(__name__)
-gk = GateKeeper(app, 
+gk = GateKeeper(app, # or use .init_app(app) later 
                 ip_header="x-my-ip", # optionnal header to use for the client IP (e.g if using a reverse proxy)
                 ban_rule={"count":3,"window":10,"duration":600}, # 3 reports in a 10s window will ban for 600s
                 rate_limit_rules=[{"count":20,"window":1},{"count":100,"window":10}], # rate limiting will be applied if over 20 requests in 1s or 100 requests in 10s

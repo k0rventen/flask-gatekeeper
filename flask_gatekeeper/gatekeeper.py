@@ -33,19 +33,18 @@ class GateKeeper:
         Rate limiting is done automatically, 
         but you have to specify when an IP should be reported, using `.report()` (usually in your login route when the creds are not valid)
 
+        ban_rule should be a dict {"count":int,"window":int,"duration":int} where
+        - count is the number of reports before actually banning the IP
+        - window is the rolling time window to look for ban reports
+        - duration is the duration of the ban in seconds.
 
-        ban_rule should be a list [<ban_count>,<ban_window>,<ban_duration>] where
-        - ban_count is the number of reports before actually banning the IP
-        - ban_window is the rolling time window to look for ban reports
-        - ban_duration is the duration of the ban in seconds.
+        rate_limit_rules should be a list [{"count":int,"window":int},..] where
+        - count is the maximum number of requests 
+        - window is the rolling time window for the rate count.
 
-        rate_limit_rule should be a list [<rate_count>,<rate_window>] where
-        - rate_count is the maximum number of requests 
-        - rate_window is the rolling time window for the rate count.
-
-        As an example, ban_rule=[3,60,600], rate_limit_rule=[100,10] would:
+        As an example, ban_rule={"count":3,"window":60,"duration":600}, rate_limit_rules=[{"count":20,"window":1},{"count":100,"window":10}] would:
         - ban any IP for 600s if it has been reported 3 times in the last 60s,
-        - rate limit any IP if it has made more than 100 requests in the last 10s.
+        - rate limit any IP if it has made more than 20 requests in the last 1s or more than 100 requests in a 10s window.
 
         If you do not set ban_rule, no banning will be done. Same goes for the rate limiting.
 
@@ -53,16 +52,14 @@ class GateKeeper:
 
         You can delay the init by omitting `app` here and calling `.init_app()` later.
 
-        If you set ip_header but the header is not present in the request, it falls back to a "no-ip" string, and any request made by potentially different clients will be added to this.
-
-        ban_func & rate_limit_func should be functions with 3 parameters that returns a string. 
-        The parameters are ban_count/rate_limit, time_window, retry_in.
+        If you set ip_header but the header is not present in the request, it falls back to the client seen by flask (which might be the proxy's IP if using one) string, and any request made by potentially different clients will be added to this.
 
         Args:
             app (flask.Flask, optional): Flask app to wrap around. Defaults to None.
             ban_rule (dict, optional): Global ban rule for the whole app. Defaults to None.
             rate_limit_rules (list, optional): Global rate limit rules for the whole app. Defaults to None.
             ip_header (str, optional): Header to check for the IP. useful with a proxy that will add a header with the ip of the actual client. Defaults to request.remote_addr.
+            excluded_methods (str, optional): Types of requests to ignore when counting requests. Can be GET, POST, HEAD, OPTIONS.. Defaults to None.
         """
         self.ban_rule = ban_rule
         self.ban_count = ban_rule["count"] if ban_rule else 0
@@ -77,12 +74,28 @@ class GateKeeper:
             self.init_app(app)
 
     def _ban_func(self, ban_infos):
+        """internal func for creating a http response when the client is banned. 
+
+        Args:
+            ban_infos (dict): dict containing the infos about the ban
+
+        Returns:
+            Response: ready to be server response with 403 http code and retry after header
+        """
         ban_response = Response("ip {} banned for {}s (reported {} times in a {}s window)".format(
             ban_infos["ip"], ban_infos["retry"], ban_infos["count"], ban_infos["window"]), status=403)
         ban_response.headers["Retry-After"] = ban_infos["retry"]
         return ban_response
 
     def _rate_limit_func(self, rate_limit_infos):
+        """internal func for creating a http response when the client is being rate limited.
+
+        Args:
+            rate_limit_infos (dict): dict containing the infos about the rate limiting
+
+        Returns:
+            Response: ready to be served response with 429 http code and retry after header
+        """
         rate_limit_response = Response("ip {} rate limited for {}s (over {} requests in a {}s window)".format(
             rate_limit_infos["ip"], rate_limit_infos["retry"], rate_limit_infos["count"], rate_limit_infos["window"]), status=429)
         rate_limit_response.headers["Retry-After"] = rate_limit_infos["retry"]
@@ -160,8 +173,12 @@ class GateKeeper:
         app.before_request(self._before_request)
 
     def report(self, ip:str=None):
-        """Report an IP. 
+        """Report the client who made the request, increasing its tally towards being banned.
+        
         If no ip arg is provided, uses the ip_header arg provided to the GateKeeper instance
+
+        Args:
+            ip (str, optional): IP to ban. Defaults to None.
         """
         client_ip = ip or self._get_ip()
         self.ips[client_ip].add_report()
